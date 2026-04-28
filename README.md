@@ -14,6 +14,7 @@ The human approves everything before it reaches a customer. That's not a phase â
 - [Solution Summary](overview/02-solution-summary.md)
 - [Phased Roadmap](overview/03-phased-roadmap.md)
 - [Why We Can Do This](overview/04-why-we-can-do-this.md)
+- [Risks](overview/05-risks.md)
 
 ### Layer 2 â€” Technical Design
 
@@ -22,6 +23,8 @@ The human approves everything before it reaches a customer. That's not a phase â
 - [Knowledge Pipeline](design/03-knowledge-pipeline.md)
 - [Sync Agent Flow](design/04-sync-agent-flow.md)
 - [Open Questions](design/05-open-questions.md)
+- [Data Handling and Privacy](design/06-data-handling.md)
+- [Non-Functional Requirements](design/07-non-functional-requirements.md)
 
 ### Decisions
 

@@ -1,13 +1,15 @@
 # ADR-002 — Data Store Selection
 
-**Status:** Pending  
+**Status:** Proposed (pending ops/engineering confirmation)  
 **Date:** April 2026
 
 ---
 
 ## Decision
 
-Not yet made. This document captures the requirements and options so engineering and ops can make an informed recommendation.
+Use **pgvector** if the org already runs a managed Postgres we can extend. If not, default to **Qdrant** in a Docker container.
+
+This is a proposal, not a final call. Ops and engineering own the final selection and can override based on infrastructure context I don't have visibility into. The reasoning is below so the decision is something we can react to rather than something we have to invent from scratch.
 
 ---
 
@@ -31,39 +33,43 @@ Nice to have:
 ## Options
 
 ### Chroma
-- Simplest setup — single Docker container, minimal config
-- Good for getting started quickly
-- Less battle-tested at scale
-- Best fit if we want to move fast in Phase 1 and revisit later
+- Simplest setup. Single Docker container, minimal config.
+- Good for prototyping and demos.
+- Less battle-tested at scale and the project has shipped breaking changes between versions in the past.
+- I wouldn't run a production index on Chroma. Fine for a one-off proof of concept.
 
-### Qdrant
-- More production-ready than Chroma
-- Good filtering capabilities on metadata fields
-- Slightly more config overhead than Chroma
-- Best fit if ops wants something more robust from the start
+### Qdrant *(default if no managed Postgres)*
+- More production-ready than Chroma.
+- Good filtering on metadata fields, which we need.
+- Slightly more config overhead than Chroma but still single-container deployable.
+- Strong fit when ops wants something durable from day one and there's no existing Postgres to extend.
 
-### pgvector (Postgres extension)
-- Runs inside an existing Postgres instance
-- No new infrastructure if we already have managed Postgres
-- Familiar tooling for engineering teams already using Postgres
-- Best fit if we have an existing managed Postgres we can extend
+### pgvector *(default if managed Postgres exists)*
+- Runs as an extension inside an existing Postgres instance.
+- No new infrastructure if we already have managed Postgres.
+- Familiar tooling for engineering teams already on Postgres. Backups, monitoring, and access patterns are already solved.
+- The path of least operational resistance when the prerequisite holds.
 
 ### Pinecone / Weaviate (managed cloud)
-- Fully managed — no infrastructure to run
-- Additional cost and an external dependency
-- Best fit if self-hosted maintenance is a concern and budget allows
+- Fully managed, no infrastructure to run.
+- Recurring cost plus an external dependency we don't have today.
+- Reserve as the fallback if self-hosted maintenance becomes painful or scale exceeds what a single Qdrant box can handle.
 
 ---
 
 ## Questions for Ops/Engineering
 
-1. Do we have an existing managed Postgres instance? If yes, pgvector is likely the lowest-friction path.
-2. What is our tolerance for self-hosted database maintenance?
-3. Is there an existing data infrastructure team or tooling that should own this?
-4. What does our backup and recovery story look like for a new data store?
+These are the things I need confirmed to lock the decision in.
+
+1. Do we have an existing managed Postgres instance? If yes, what version, and is the team comfortable enabling the pgvector extension on it?
+2. If no Postgres, who would own a Qdrant container long-term? Same ops process as the existing Zendesk archive container, or a different team?
+3. What's the backup and recovery expectation for the index? The data is reproducible from source if we lose it, but a full rebuild would mean another expensive LLM extraction pass.
+4. Are there data residency or compliance constraints that rule out either option?
 
 ---
 
 ## Revisit Conditions
 
-This ADR should be completed once ops and engineering have reviewed the options above and answered the questions. The data store decision gates Phase 1 — nothing can be indexed until it's resolved.
+This ADR moves from Proposed to Accepted once ops and engineering confirm the four questions above. The data store decision gates Phase 1. Nothing can be indexed until it's resolved.
+
+If the volume estimates in the knowledge pipeline doc turn out to be off by an order of magnitude in either direction, revisit. pgvector and Qdrant both scale to the volume currently expected, but a 10x change in either direction shifts the calculus.

@@ -82,14 +82,6 @@ Run log updated — records processed, errors, duration
 
 ---
 
-## Open Questions for Ops/Engineering
+## Technology Selection
 
-Before choosing specific technology, the following questions should be answered:
-
-- Do we have an existing orchestration tool? (Airflow, Prefect, cron, etc.)
-- Is there a managed database we standardize on that could support vector storage?
-- Do we have a secrets manager for API credentials?
-- Is there an existing message queue or event bus that could replace the n8n scheduler?
-- What is our preferred hosting environment — cloud provider, self-hosted VPS, on-prem?
-
-The component model above is technology-agnostic. Technology selection should follow from what already exists.
+The component model above is intentionally technology-agnostic. Specific tools should follow from what ops and engineering already run rather than being chosen in isolation. The current proposed defaults (n8n, pgvector or Qdrant, co-located hosting) are documented in [Open Questions](05-open-questions.md) along with the questions that still need answers before Phase 1 can start.

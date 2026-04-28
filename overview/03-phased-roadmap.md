@@ -10,11 +10,22 @@ Before the agent can do anything useful, the knowledge pipeline has to exist and
 
 **Scope:**
 - Stand up the data collector and orchestration engine
-- Connect to Zendesk archive, GitLab docs, and Jira as first sources
+- Connect to Zendesk archive, GitLab docs, and Jira (in that order)
 - Process raw data into structured, searchable knowledge
 - Validate that the index returns useful results when queried manually
 
-**Why this first:** The sync agent is only as good as what it can look up. Building the agent before the knowledge layer exists produces something that guesses instead of researches.
+**Build order matters.** Zendesk first because it's the highest-volume historical source and the extraction prompt will need the most iteration there. GitLab next because it's the cleanest data and acts as a sanity check that the pipeline works on well-structured input. Jira last because the value is narrower (known-bug lookups) and we want the index already populated when we wire it in.
+
+**Why this phase first:** The sync agent is only as good as what it can look up. Building the agent before the knowledge layer exists produces something that guesses instead of researches.
+
+**Phase 1 is done when:**
+1. The pipeline runs end-to-end on a schedule and recovers from a single-source failure without manual intervention.
+2. The index contains processed records from all three sources at expected volume (within 10% of source counts).
+3. A set of 20 representative test queries, drawn from real historical cases, returns a relevant top-3 result at least 80% of the time, judged manually by the support team.
+4. Pipeline runs are observable: someone can answer "is the index healthy right now?" without opening a database.
+5. The total monthly LLM spend for delta runs is within the budget agreed at kickoff.
+
+If all five hold for two consecutive weeks, Phase 1 ships and we open Phase 2.
 
 **What we'll know at the end:** Whether our existing data is good enough to support AI-assisted resolution, and where the gaps are.
 

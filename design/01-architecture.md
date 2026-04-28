@@ -4,26 +4,25 @@
 
 The system has two distinct layers that share a data store but operate independently.
 
+```mermaid
+flowchart TB
+    subgraph Pipeline["Knowledge Pipeline (async, scheduled)"]
+        direction LR
+        SC[Source Connectors] --> PE[Processing Engine]
+    end
+
+    DS[("Data Store<br/>Vector Index")]
+
+    subgraph Sync["Sync Agent (real time, per interaction)"]
+        direction LR
+        TR[Salesforce Trigger] --> OR[Orchestrator] --> LLM[LLM Draft] --> HR[Human Review]
+    end
+
+    PE -->|writes| DS
+    OR -->|reads| DS
 ```
-┌─────────────────────────────────────────────────────┐
-│                 KNOWLEDGE PIPELINE                  │
-│           Async — runs on a schedule                │
-│                                                     │
-│  Source Connectors → Processing Engine → Index      │
-└──────────────────────────┬──────────────────────────┘
-                           │ writes to
-                    ┌──────▼──────┐
-                    │  DATA STORE │
-                    │ Vector Index│
-                    └──────┬──────┘
-                           │ reads from
-┌──────────────────────────▼──────────────────────────┐
-│                   SYNC AGENT                        │
-│             Real time — per interaction             │
-│                                                     │
-│  SF Trigger → Orchestrator → LLM → Human Review    │
-└─────────────────────────────────────────────────────┘
-```
+
+The pipeline writes to the store on a schedule. The agent reads from it during a customer interaction. They share the store and nothing else.
 
 ---
 
@@ -58,14 +57,16 @@ The system has two distinct layers that share a data store but operate independe
 Some decisions are made. Others depend on what ops and engineering already have.
 
 **Decided:**
-- Orchestration: n8n (self-hosted, Docker-native, visual workflow builder)
-- LLM: Anthropic API (Claude) via API calls
-- Salesforce integration: Flow + HTTP callout + Apex REST class
+- Orchestration: n8n (self-hosted, Docker-native, visual workflow builder). Subject to override if an existing Airflow or Prefect setup is already in place.
+- LLM: Anthropic API (Claude). Confirmed pending budget sign-off.
+- Salesforce integration: Flow + HTTP callout + Apex REST class, same pattern as the existing support portal onboarding flow.
 
-**To be determined with ops/engineering:**
-- Vector database (Chroma, Qdrant, or pgvector depending on existing stack)
-- Hosting environment for n8n and the data store
-- Secrets management for API credentials
-- Whether an existing data pipeline or message queue can be reused
+**Proposed, pending ops/engineering confirmation:**
+- Vector database: pgvector if a managed Postgres exists, otherwise Qdrant. See [ADR-002](../decisions/adr-002-data-store-tbd.md).
+- Hosting environment: co-located with the existing Zendesk archive container.
+- Secrets management: whatever's already in use. Doppler or 1Password Connect if nothing is.
 
-See [ADR-001](../decisions/adr-001-external-orchestration.md) and [ADR-002](../decisions/adr-002-data-store-tbd.md) for the reasoning behind these decisions.
+**Still open:**
+- Whether an existing data pipeline or message queue should replace the n8n scheduler if Phase 1 volume turns out higher than expected.
+
+See [ADR-001](../decisions/adr-001-external-orchestration.md) and [ADR-002](../decisions/adr-002-data-store-tbd.md) for the reasoning behind these decisions, and [Open Questions](05-open-questions.md) for the full list.
