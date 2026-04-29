@@ -13,16 +13,28 @@ flowchart TB
 
     DS[("Data Store<br/>Vector Index")]
 
-    subgraph Sync["Sync Agent (real time, per interaction)"]
-        direction LR
-        TR[Salesforce Trigger] --> OR[Orchestrator] --> LLM[LLM Draft] --> HR[Human Review]
+    subgraph Sync["Sync Agent (real time, per case)"]
+        direction TB
+        TR[Salesforce Trigger]
+        OR[Orchestrator]
+        Parse[Log Parser]
+        DD[Datadog MCP]
+        LLM[LLM Synthesis]
+        Out[Findings to Support engineer]
+
+        TR --> OR
+        OR --> Parse
+        OR --> DD
+        Parse --> LLM
+        DD --> LLM
+        LLM --> Out
     end
 
     PE -->|writes| DS
     OR -->|reads| DS
 ```
 
-The pipeline writes to the store on a schedule. The agent reads from it during a customer interaction. They share the store and nothing else.
+The pipeline writes to the store on a schedule. The agent reads from it during a case investigation, alongside live Datadog signal and the customer's own attachments. The two layers share the store and nothing else.
 
 ---
 
@@ -32,7 +44,7 @@ The pipeline writes to the store on a schedule. The agent reads from it during a
 
 **Async before sync.** The knowledge pipeline runs independently of any customer interaction. By the time the agent needs to look something up, the work is already done.
 
-**Human in the loop.** No response reaches a customer without rep approval. This is a design constraint, not a roadmap item.
+**Human in the loop.** No response reaches a customer without support engineer approval. This is a design constraint, not a roadmap item.
 
 **Component boundaries are explicit.** Each component has one job. Orchestration does not process data. Connectors do not store data. This makes it easier to swap out individual pieces as requirements evolve.
 
@@ -43,12 +55,14 @@ The pipeline writes to the store on a schedule. The agent reads from it during a
 | Component | Job | Layer |
 |---|---|---|
 | Orchestration Engine | Schedules and sequences jobs, handles failures | Both |
-| Source Connectors | Pull raw data from each API | Pipeline |
+| Source Connectors | Pull raw data from each indexed source API | Pipeline |
 | Processing Engine | Cleans, chunks, extracts via LLM | Pipeline |
 | Data Store | Persists structured knowledge for search | Shared |
-| SF Trigger | Fires on case creation or EC submission | Sync |
-| Sync Agent | Searches index, drafts response, routes to human | Sync |
-| Human Review Queue | Slack or email — rep approves before send | Sync |
+| SF Trigger | Fires on case creation, calls the agent via HTTP | Sync |
+| Log Parser | Extracts timestamps, error codes, identifiers from customer-submitted attachments | Sync |
+| Datadog MCP Client | Queries Datadog for time-correlated server-side signal | Sync |
+| LLM Synthesis | Combines case data, parsed logs, Datadog signal, and historical matches into findings | Sync |
+| Findings Delivery | Routes findings to the support engineer (Slack, case comment, or email; pending) | Sync |
 
 ---
 

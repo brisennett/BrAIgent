@@ -14,7 +14,9 @@ In rough order of sensitivity:
 
 **Customer-submitted content.** Ticket subject lines, descriptions, attachments, error logs, version numbers. Whatever the customer types or pastes into a case. Treat as the highest-sensitivity input. May contain customer environment details, internal customer data, or in worst cases, PII the customer shouldn't have included.
 
-**Resolution notes from reps.** Free-text notes attached to historical tickets, both Zendesk archive and current Salesforce cases. May reference customer accounts, names, internal escalation context.
+**Server-side observability data.** Datadog logs, traces, metrics, and alerts pulled at investigation time via the Datadog MCP. May contain internal service identifiers, customer IDs in log fields, internal stack traces, and operational details we'd rather not see escape. Treat as internal-confidential.
+
+**Resolution notes from support engineers.** Free-text notes attached to historical tickets, both Zendesk archive and current Salesforce cases. May reference customer accounts, names, internal escalation context.
 
 **Customer account data.** Segment, ARR, renewal status, account tier. Pulled from Salesforce on demand by the sync agent. Sensitive but well-structured.
 
@@ -33,6 +35,10 @@ flowchart LR
         Acct[Account context]
     end
 
+    subgraph DD["Datadog (vendor-hosted)"]
+        Logs[Logs / traces / metrics]
+    end
+
     subgraph Internal["Self-hosted infra"]
         n8n[n8n Orchestrator]
         Index[("Vector Index")]
@@ -49,16 +55,17 @@ flowchart LR
 
     Case -->|case payload| n8n
     Acct -->|context lookup| n8n
+    Logs -->|signal via MCP| n8n
     Zendesk -->|historical tickets| n8n
     n8n -->|chunks for embedding| Embed
-    n8n -->|prompt + retrieved chunks| Claude
-    Claude -->|draft response| n8n
+    n8n -->|prompt + retrieved chunks + Datadog signal| Claude
+    Claude -->|findings| n8n
     Embed -->|embedding vectors| Index
     n8n -->|search query| Index
-    n8n -->|draft + sources| Rep[Rep via Slack]
+    n8n -->|findings + sources| SE[Support engineer via Slack or case comment]
 ```
 
-Every arrow that crosses a subgraph boundary is a place where customer data leaves a system we control. The two external destinations are Anthropic and Voyage AI. Everything else is either Salesforce (already in our supply chain) or our own infrastructure.
+Every arrow that crosses a subgraph boundary is a place where data leaves a system we control. The external destinations are Anthropic and Voyage AI. Salesforce and Datadog are vendor-hosted but already part of our supply chain.
 
 ---
 
@@ -86,6 +93,18 @@ Confirm against the contract that's actually in place, but the standard Anthropi
 Same questions, different vendor. Embeddings are derived from chunks of indexed content, so the same data classifications apply. Confirm DPA, retention posture, and regional endpoint before sending production data.
 
 If the answers are unsatisfactory, fall back to a self-hosted open-source embedding model. That removes the second external vendor at the cost of additional ops work.
+
+---
+
+## Datadog Posture
+
+The Datadog MCP queries Datadog APIs on the agent's behalf and returns server-side signal at investigation time. Two things matter here.
+
+**Datadog is already in our supply chain.** This is not a new vendor. The DPA, retention posture, and access controls already in place for Datadog cover this use case. The change is who is making the queries and what's done with the results.
+
+**The MCP is the new piece.** Whether we're standing up an internal MCP, using a third-party one, or running an open-source MCP in our own infrastructure changes the answer to "where do Datadog credentials live and who can query what." This decision is captured in [Open Questions](05-open-questions.md) and tracked as a Phase 1 prerequisite.
+
+**Output handling.** Datadog responses go into the LLM prompt alongside the case data. The same posture applies as everything else sent to Anthropic. Audit log captures the query, the response size, and a hash of the prompt body.
 
 ---
 

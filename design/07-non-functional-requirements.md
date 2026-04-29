@@ -18,11 +18,13 @@ Numbers below are starting positions. Some are calibrated against current suppor
 
 ## Latency
 
-**Sync agent end-to-end (case creation to draft delivered to rep).** Target under 60 seconds median, under 120 seconds p95. The rep is not actively waiting at this point, so single-digit seconds is not required, but anything above 2 minutes risks the draft showing up after the rep has already started working the case manually.
+**Sync agent end-to-end (case creation to findings delivered to support engineer).** Target under 90 seconds median, under 180 seconds p95. The support engineer is not actively waiting at this point, so single-digit seconds is not required, but anything above 3 minutes risks the findings showing up after the support engineer has already started working the case manually. Slightly looser than the original budget because the Phase 1 flow adds a Datadog round trip and a log-parsing step.
 
 **Vector index search.** Under 500 milliseconds for a typical query. Both pgvector and Qdrant comfortably hit this at Phase 1 volume.
 
-**LLM call (extraction or draft).** Bounded by the Anthropic API. Typical observed latency is 5 to 30 seconds depending on response length. The orchestrator should treat this as the dominant time cost in the sync agent flow.
+**Datadog MCP query.** Target under 5 seconds for a typical investigation query. The step times out at 15 seconds and the synthesis step proceeds without Datadog signal if the timeout fires. Datadog itself is generally fast, but the MCP layer adds variability we don't control yet.
+
+**LLM call (extraction or synthesis).** Bounded by the Anthropic API. Typical observed latency is 5 to 30 seconds depending on response length. The orchestrator should treat this as the dominant time cost in both the pipeline extraction step and the sync agent synthesis step.
 
 ---
 
@@ -30,7 +32,7 @@ Numbers below are starting positions. Some are calibrated against current suppor
 
 **Knowledge pipeline.** Best-effort. A scheduled run failing once is acceptable as long as the next run picks up the missed delta. An entire day of failed runs without alerting is not acceptable.
 
-**Sync agent.** Should be available during business hours of the support team. A Phase 2 outage means reps work cases manually without a draft, which is a degradation rather than an outage. No customer-facing impact.
+**Sync agent.** Should be available during business hours of the support team. A Phase 2 outage means support engineers work cases manually without a draft, which is a degradation rather than an outage. No customer-facing impact.
 
 **Phase 3 (deflection in Experience Cloud) raises this bar.** When the agent is in the customer path, downtime means a worse customer experience. Higher availability target to be defined when Phase 3 scoping begins.
 

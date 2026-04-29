@@ -1,6 +1,6 @@
 # AI Support Agent
 
-An AI layer built on top of our existing support systems to reduce ticket volume, speed up resolution, and put a draft in front of the rep before they've even opened the case.
+An AI layer built on top of our existing support systems to reduce ticket volume, speed up resolution, and put a draft in front of the support engineer before they've even opened the case.
 
 The human approves everything before it reaches a customer. That's not a phase — it's a permanent design decision.
 
@@ -30,6 +30,7 @@ The human approves everything before it reaches a customer. That's not a phase �
 
 - [ADR-001 — External Orchestration](decisions/adr-001-external-orchestration.md)
 - [ADR-002 — Data Store](decisions/adr-002-data-store-tbd.md)
+- [ADR-003 — MCP as the Pattern for Live Data Sources](decisions/adr-003-mcp-pattern.md)
 
 ---
 

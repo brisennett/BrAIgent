@@ -33,12 +33,27 @@ The Zendesk archive is running in a Docker container. Who owns that going forwar
 
 *Recommendation:* Ops owns the container. Patches, backups, uptime, restarts all sit with ops. Support owns the data semantics: what's in there, what's good, what's noise, what gets flagged for re-extraction when the prompt changes. The data collector reads via a service account with a read-only API token. Clear lanes for both teams.
 
+**Datadog MCP availability**
+The investigative aid in Phase 1 Workstream A depends on querying Datadog at investigation time via an MCP. We don't have one running yet. Three paths: stand up an open-source MCP we host ourselves, use a third-party hosted Datadog MCP if one exists with terms we accept, or skip MCP and write a direct Datadog API client.
+
+*Recommendation:* Stand up an open-source Datadog MCP in our own infrastructure. Keeps Datadog credentials inside our perimeter, avoids a new vendor relationship, gives us a generalizable pattern we can reuse for the next live data source we want to wire up. Hosted third-party MCPs are off the table for a system that queries observability data unless legal has signed off. Direct API is a fallback if no acceptable MCP exists. Tracked as a Phase 1 prerequisite. See [ADR-003](../decisions/adr-003-mcp-pattern.md).
+
+**Log format heterogeneity**
+Customer-attached logs come in many formats: structured JSON, plaintext stack traces, exported config files, screenshots. The parser in Step 2 of the sync agent flow has to handle the top three or so without choking on the rest.
+
+*Recommendation:* Sample 50 recent cases with attachments, categorize the formats, and write parsers for the three most common. The rest are passed through as raw text and the LLM does its best with them. New parsers added on demand as we see patterns. Don't try to solve every format up front.
+
+**Customer attachment handling**
+Some attachments will exceed token limits, contain binary content (screenshots, exported state), or include things we shouldn't send to the LLM (credentials, customer PII the customer didn't realize they pasted). Need a clear handling policy.
+
+*Recommendation:* Strip or summarize anything over a size threshold before sending to the LLM. Run pattern matching for common credential and PII shapes (API keys, tokens, email addresses, IP addresses if relevant) and mask them in the parsed output. Image attachments are out of scope for Phase 1 unless we surface them to the support engineer alongside the findings. Audit log records the size and type of every attachment processed.
+
 ---
 
 ## Support / Leadership
 
-**Human review queue location**
-Does the draft review happen in Slack, email, or back inside Salesforce as a task? This is a workflow question as much as a technical one. Slack is fastest. Salesforce keeps everything in one place. Email is familiar but adds friction.
+**Findings delivery channel**
+Where do the Phase 1 findings show up for the support engineer? Slack DM or thread, case comment in Salesforce, email, or something else. This is a workflow question as much as a technical one. Slack is fastest and easiest to give feedback in. Salesforce keeps everything in one place. Email is familiar but adds friction. (Phase 2 customer response drafts use the same channel by default.)
 
 **Deflection success definition**
 What counts as a successful deflection for reporting purposes? Customer clicks "yes this helped"? Session ends without a ticket? We need a definition before we can measure it.

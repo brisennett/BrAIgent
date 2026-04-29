@@ -18,27 +18,37 @@ It runs async, separate from any customer interaction. When it's done, the index
 
 ## The Support Agent (Real Time)
 
-Triggered when a customer starts an interaction — either through Experience Cloud before a ticket exists, or when a case is created in Salesforce.
+Triggered when a case is created in Salesforce. Phase 1 is support-team-facing only. Guided intake comes in Phase 3. A customer-facing surface comes in Phase 4 with the exact form still open: free self-service deflection, a paid self-healing tier, or some combination of the two.
 
 What it does, in order:
 
-**1. Deflection attempt**
-Reads the customer's description and checks it against public docs, playbooks, and the support guide. If it looks like a how-to or documentation question, it surfaces an answer and asks if that resolves it. If yes — no ticket created.
+**1. Ingest case data**
+Pulls case description, attachments, and customer account context from Salesforce.
 
-**2. Guided intake**
-If deflection doesn't work, the agent collects structured information before the case is submitted. Version numbers, error messages, logs, relevant context. The support guide feeds what questions to ask based on the type of issue.
+**2. Parse logs and customer-submitted content**
+Extracts timestamps, error codes, and identifiers from attached logs and pasted error output so the next steps have something structured to work with.
 
-**3. Investigation and draft**
-Once a case exists, the agent searches the knowledge index — existing SF cases, Zendesk history, Confluence, Jira — and drafts a response based on what it finds.
+**3. Correlate with Datadog**
+Queries the Datadog MCP for time-correlated and customer-correlated server-side signal during the relevant window. Errors, anomalies, recent deployments, related alerts.
 
-**4. Human review**
-The draft goes to the rep. They review it, edit if needed, and approve before anything is sent to the customer.
+**4. Search the knowledge index**
+Looks up similar past cases in the index built by the knowledge pipeline. Existing Salesforce cases, Zendesk archive, Jira.
+
+**5. Synthesize findings**
+The LLM combines the customer's evidence, the Datadog signal, and the historical matches into a structured findings document: a one-line summary, the supporting evidence with citations, a confidence indicator, and a list of suggested next investigative actions.
+
+**6. Deliver to the support engineer**
+Findings show up wherever the team works the case (Slack, case comment, email; decision pending). The same findings can flow to engineering if the support engineer escalates.
+
+Customer-facing drafts come in Phase 2. The agent does not write to a customer in Phase 1. A customer-facing surface (free deflection, paid self-healing tier, or both) comes in Phase 4.
 
 ---
 
 ## What the Agent Does Not Do
 
-- Send responses to customers without human approval
+- Send responses to customers without human approval in Phases 1 through 3 (permanent design constraint for the support workflow)
 - Make decisions about escalation or priority
 - Access systems it hasn't been explicitly connected to
 - Replace the support team's judgment on complex issues
+- Write a draft customer response in Phase 1 (added in Phase 2)
+- Talk to customers directly in Phases 1 through 3 (added in Phase 4, form TBD)

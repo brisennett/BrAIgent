@@ -24,7 +24,7 @@ The team is comfortable with self-hosted Docker workloads. The orchestration eng
 
 ## Domain Knowledge Is the Hard Part
 
-Most AI projects fail because the people building the system don't understand the problem well enough. The support team knows what good looks like, what the common failure patterns are, what information a rep actually needs to resolve a case, and where the current process breaks down. That knowledge is what makes the difference between an agent that's useful and one that produces plausible-sounding nonsense.
+Most AI projects fail because the people building the system don't understand the problem well enough. The support team knows what good looks like, what the common failure patterns are, what information a support engineer actually needs to resolve a case, and where the current process breaks down. That knowledge is what makes the difference between an agent that's useful and one that produces plausible-sounding nonsense.
 
 ---
 
